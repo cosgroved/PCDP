@@ -7,9 +7,11 @@ import edu.rice.pcdp.runtime.Runtime;
 import edu.rice.pcdp.runtime.IsolatedManager;
 import edu.rice.pcdp.config.SystemProperty;
 
+import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
 /**
  * The main class of the PCDP framework, containing most of the user-visible
@@ -510,6 +512,32 @@ public final class PCDP {
         }
     }
 
+	public static <T> void forseq(Iterable<T> iterable, Consumer<T> body) {
+		for (T item : iterable) {
+			body.accept(item);
+		}
+	}
+
+	public static <T> void forasync(Iterable<T> iterable, Consumer<T> body) {
+		Iterator<T> iterator = iterable.iterator();
+		if (iterator.hasNext()) {
+			T first = iterator.next();
+			while (iterator.hasNext()) {
+				T item = iterator.next();
+				async(() -> {
+					body.accept(item);
+				});
+			}
+			body.accept(first);
+		}
+	}
+
+	public static <T> void forall(Iterable<T> iterable, Consumer<T> body) {
+		finish(() -> {
+			forasync(iterable, body);
+		});
+	}
+    
     /**
      * Retrieve the number of software threads the PCDP runtime was configured
      * with.
